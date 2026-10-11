@@ -4,7 +4,7 @@
 
 예를 들어 고객 문의를 ‘결제 / 기술 / 계정’으로 분류하거나, 문의의 긴급도를 점수로 매기거나, ‘환불 요청인가?’를 판단하게 할 수 있습니다. 모델을 바꾸어 같은 시험을 치르게 한 다음, 어떤 모델이 내 업무에 맞는지 확인합니다.
 
-앱은 한국어 화면으로 제공되며 **Python 표준 라이브러리만으로 실행**됩니다. 앱 실행에는 `pip install`, Node.js, 프런트엔드 빌드가 필요 없습니다. 실제 AI 판단을 하려면 Ollama·Ollaya·llama.cpp 중 지원되는 로컬 모델 서버와 모델 가중치를 별도로 준비해야 합니다.
+앱은 한국어 화면으로 제공되며 **프로젝트 전용 `.venv`에서 Python 표준 라이브러리만으로 실행**됩니다. 앱 실행에는 `pip install`, Node.js, 프런트엔드 빌드가 필요 없습니다. 실제 AI 판단을 하려면 Ollama·Ollaya·llama.cpp 중 지원되는 로컬 모델 서버와 모델 가중치를 별도로 준비해야 합니다.
 
 > 이 저장소에는 앱 코드·예제·완성 리포트가 들어 있습니다. 수 GB 크기의 모델 파일과 개인 실험 데이터는 포함하지 않습니다. 처음 받은 컴퓨터에 모델이 이미 설치되어 있다고 가정하지 않습니다.
 
@@ -39,8 +39,8 @@
 ### 2. Finder에서 실행하기
 
 1. 저장소를 내려받아 압축을 풀거나 Git으로 복제합니다. 폴더 이름은 `decision_model`이어도 되고 다른 이름이어도 됩니다.
-2. **처음 한 번 `setup.command`를 두 번 누릅니다.** Python이나 Ollama가 없으면 설치 안내를 따르고 다시 실행합니다. 모델 준비에 동의하면 Ollaya 실행기와 기본 모델을 준비합니다.
-3. **`start.command`를 두 번 누릅니다.** 앱과 필요한 로컬 서버를 시작하고 자유 성능평가 화면을 엽니다.
+2. **처음 한 번 `setup.command`를 두 번 누릅니다.** 먼저 이 폴더에 `.venv`를 만들고, 그 Python으로 준비 도우미를 실행합니다. Python이나 Ollama가 없으면 설치 안내를 따르고 다시 실행합니다. 모델 준비에 동의하면 Ollaya 실행기와 기본 모델을 준비합니다.
+3. **`start.command`를 두 번 누릅니다.** `.venv`를 확인한 뒤 그 환경으로 앱을 시작합니다. 필요한 로컬 모델 서버를 연결하고 자유 성능평가 화면을 엽니다. 직접 `activate`할 필요가 없습니다.
 4. 실행된 터미널 창을 열어 둡니다. 종료할 때 그 창에서 **Ctrl+C**를 누릅니다.
 
 macOS가 파일 열기를 막으면 Finder의 ‘열기’ 또는 시스템 설정의 정상적인 승인 절차를 이용하세요. 파일을 옮기며 실행 권한이 사라졌다면 터미널에서 프로젝트 폴더로 이동해 `chmod +x start.command setup.command`를 실행할 수 있습니다.
@@ -51,11 +51,13 @@ macOS가 파일 열기를 막으면 Finder의 ‘열기’ 또는 시스템 설�
 
 ```sh
 python3 --version
-python3 setup_mac.py --check
-python3 setup_mac.py
-python3 run.py
+python3 bootstrap.py
+.venv/bin/python setup_mac.py --check
+.venv/bin/python setup_mac.py
+.venv/bin/python run.py
 ```
 
+- `bootstrap.py`: `.venv`만 준비합니다. 모델 다운로드나 앱 실행은 하지 않습니다.
 - `--check`: 설치 상태만 확인합니다. 프로그램이나 모델을 설치하지 않습니다.
 - `setup_mac.py`: 최초 준비입니다. 이미 있는 모델은 다시 받지 않고, 필요한 기본 모델을 내려받습니다.
 - `run.py`: 일상적인 실행입니다. 모델 가중치를 자동 다운로드하지 않습니다.
@@ -63,10 +65,32 @@ python3 run.py
 브라우저가 자동으로 열리지 않으면 [자유 성능평가](http://127.0.0.1:8765/evaluation)를 엽니다. 모델이 없어도 아래 명령으로 화면과 설명부터 볼 수 있습니다. 실제 평가에는 모델 연결이 필요합니다.
 
 ```sh
-python3 server.py
+.venv/bin/python server.py
 ```
 
-앱 서버를 직접 실행한 경우 배포 ZIP은 `python3 package_app.py`로 먼저 만들어야 웹의 ZIP 다운로드를 사용할 수 있습니다. `run.py`는 ZIP이 없으면 만들어 줍니다.
+앱 서버를 직접 실행한 경우 배포 ZIP은 `.venv/bin/python package_app.py`로 먼저 만들어야 웹의 ZIP 다운로드를 사용할 수 있습니다. `run.py`는 ZIP이 없으면 만들어 줍니다.
+
+### 4. venv는 무엇을 분리하나요?
+
+`.venv`는 **이 프로젝트에서만 사용하는 Python 실행 환경과 패키지 폴더**입니다. 다른 프로젝트에 설치한 패키지와 섞이지 않게 합니다. 현재 앱은 외부 Python 패키지가 없어 전역 환경에서도 실행 가능하지만, 기본 실행 파일은 일관되게 `.venv`를 사용합니다.
+
+- **앱 서버·준비 도우미:** `.venv`의 Python으로 실행합니다. `run.py`가 새로 시작하는 앱 서버도 같은 Python을 이어받습니다.
+- **Ollama·Ollaya·모델 가중치:** Python 패키지가 아니라 별도 프로그램·파일입니다. venv 안에 설치하거나 복사하지 않습니다. 기존 로컬 연결 주소도 그대로 사용합니다.
+- **Node.js:** JavaScript 테스트용이며 Python venv와 별개입니다.
+- **pip:** Python에 포함된 `ensurepip`로 준비하며 자동 업그레이드나 외부 패키지 다운로드를 하지 않습니다. 모델 다운로드는 이후 준비 도우미의 별도 단계입니다.
+
+터미널에서 `source .venv/bin/activate`를 실행하면 이후 `python` 명령이 이 환경을 가리키게 할 수도 있습니다. 종료는 `deactivate`입니다. 위처럼 `.venv/bin/python`을 직접 지정하면 활성화 절차가 필요 없습니다.
+
+**다른 Mac이나 다른 폴더에는 `.venv`를 복사하지 않습니다.** 절대 경로와 기반 Python에 의존하므로 코드만 옮겨 `setup.command`, `start.command` 또는 `python3 bootstrap.py`로 새로 만드세요. Git과 배포 ZIP은 `.venv`를 제외합니다. 정상적인 기존 환경은 재사용하며, 이동·손상된 환경은 자동 삭제하지 않고 복구 안내를 표시합니다. 관련 동작은 [Python venv 공식 문서](https://docs.python.org/3/library/venv.html)를 따릅니다.
+
+`bootstrap.py`로 실행할 때 환경을 자동 확인하는 터미널 명령도 사용할 수 있습니다.
+
+```sh
+python3 bootstrap.py setup_mac.py --check
+python3 bootstrap.py run.py --no-browser
+```
+
+이전 버전의 앱 서버가 이미 실행 중이면 `run.py`는 그 서버를 재사용합니다. 새 venv의 Python으로 서버를 실행하려면 **기존 앱 서버를 해당 터미널에서 먼저 종료**한 뒤 `start.command`를 실행하세요. 이미 켜진 Ollama·Ollaya 서버는 계속 재사용할 수 있습니다.
 
 ## Choice, Score, Noul은 무엇인가요?
 
@@ -205,19 +229,19 @@ Ollama 모델 목록에는 판단에 적합하지 않은 임베딩 모델도 나
 
 두 방법 중 편한 것을 사용하세요.
 
-**Git으로 옮기기:** 저장소를 복제하고 `setup.command` → `start.command` 순서로 실행합니다. 모델 파일은 저장소에 없으므로 새 Mac에서 따로 준비합니다.
+**Git으로 옮기기:** 저장소를 복제하고 `setup.command` → `start.command` 순서로 실행합니다. `.venv`는 새 Mac에서 자동 생성되며 모델 파일도 따로 준비합니다.
 
 **앱 ZIP으로 옮기기:** 이 폴더의 `releases/decision-lab-mac.zip`을 복사해 압축을 풉니다. ZIP 안의 최상위 폴더 이름은 `decision-lab`입니다. 받은 Mac에서 동일하게 준비·시작 파일을 실행합니다.
 
 코드나 문서를 수정한 뒤에는 ZIP을 다시 만드세요. 이미 있는 ZIP은 실행할 때 자동 갱신되지 않습니다.
 
 ```sh
-python3 package_app.py
+.venv/bin/python package_app.py
 ```
 
-기본 ZIP은 앱 코드·설명서·예제·완성 리포트·테스트를 담습니다. `.git`, 개인 실험, 과거 실행 기록, 모델 가중치와 설치 실행기는 포함하지 않습니다. 개발용 보고서 생성기는 Git 저장소에서 이용합니다.
+기본 ZIP은 앱 코드·설명서·예제·완성 리포트·테스트를 담습니다. `.git`, `.venv`, 개인 실험, 과거 실행 기록, 모델 가중치와 설치 실행기는 포함하지 않습니다. 개발용 보고서 생성기는 Git 저장소에서 이용합니다.
 
-모델 가중치까지 직접 옮기려면 `python3 package_app.py --include-models`를 사용할 수 있습니다. **현재 폴더의 `.models/`와 `.ollaya-models/`에 있는 파일만** 포함하며 이미 실행 중인 다른 서버의 저장소는 가져오지 않습니다. Python·Ollama와 Ollaya 실행기는 받는 Mac에서 별도로 준비해야 합니다. 큰 묶음은 Git에 올리지 않습니다.
+모델 가중치까지 직접 옮기려면 `.venv/bin/python package_app.py --include-models`를 사용할 수 있습니다. **현재 폴더의 `.models/`와 `.ollaya-models/`에 있는 파일만** 포함하며 이미 실행 중인 다른 서버의 저장소는 가져오지 않습니다. Python·Ollama와 Ollaya 실행기는 받는 Mac에서 별도로 준비해야 합니다. 큰 묶음은 Git에 올리지 않습니다.
 
 서로 다른 Mac의 결과를 비교할 때는 같은 질문·정답뿐 아니라 모델 digest(가중치 식별값), 실행기 버전, 준비 실행, 확률 방식도 맞추세요. 같은 모델 이름이라도 배포 태그가 갱신되면 내용이 달라질 수 있습니다.
 
@@ -227,6 +251,8 @@ python3 package_app.py
 decision_model/
 ├── README.md                    지금 읽는 시작 안내
 ├── start.command / setup.command   Finder에서 실행하는 파일
+├── bootstrap.py                 .venv 생성·검사 및 전용 Python 실행
+├── .venv/                       이 컴퓨터의 Python 환경; Git·ZIP 제외
 ├── run.py                       앱·로컬 서버 시작과 종료 관리
 ├── setup_mac.py                 다른 Mac의 최초 준비
 ├── server.py                    웹 화면 제공, 요청 검사, 모델 연결
@@ -266,6 +292,7 @@ evaluation-metrics.js가 지표 계산 → 표·그래프로 표시
 | 증상 | 확인할 것 |
 |---|---|
 | `python3`를 찾을 수 없음 | Python 3.9 이상 설치 후 터미널을 다시 열거나 `setup.command`를 다시 실행합니다. |
+| `.venv`를 사용할 수 없다는 메시지 | 폴더를 옮겼거나 기반 Python이 바뀌었을 수 있습니다. 앱을 종료하고 기존 `.venv`를 `.venv-backup` 등 사용하지 않는 이름으로 보관한 뒤 `python3 bootstrap.py`를 실행하세요. 선택적으로 설치했던 패키지는 다시 설치합니다. |
 | 모델 목록이 비어 있음 | 해당 서버가 켜져 있는지, 주소·포트가 맞는지 확인합니다. 앱 폴더의 모델과 기존 Ollama 서버의 저장소가 다를 수 있습니다. |
 | Ollama는 연결되는데 전용 모델이 없음 | JevK5·Laya·decider 기본 모델은 Ollaya 쪽입니다. Apple Silicon/macOS 조건과 준비 도우미 완료 여부를 확인합니다. |
 | 모델을 선택했지만 형식 오류가 남 | 임베딩 전용 모델인지, 필요한 로그확률 또는 JSON 계약을 지원하는지 확인합니다. 실패 유형을 펼쳐 보세요. |
@@ -273,7 +300,7 @@ evaluation-metrics.js가 지표 계산 → 표·그래프로 표시
 | 첫 요청이 유난히 느림 | 모델 로딩 시간이 포함될 수 있습니다. 준비 실행 여부를 맞추고 이후 p50·p95와 표본 수도 함께 봅니다. |
 | 입력 잘림 오류 | 질문·선택지를 포함한 입력이 모델 한도를 넘었을 수 있습니다. 문서를 나누세요. 앱의 글자 수 제한과 모델 토큰 한도는 다릅니다. |
 | 새 폴더에서 실행했는데 예전 화면이 나옴 | `run.py`는 이미 실행 중인 8765 앱 서버를 재사용합니다. 기존 앱을 실행한 터미널에서 종료한 뒤 새 폴더에서 다시 실행하세요. |
-| 8765 포트를 다른 프로그램이 사용함 | 해당 프로그램을 확인하거나 `python3 server.py --port 8766`으로 앱만 다른 포트에 띄웁니다. 이때 브라우저 주소도 8766으로 바꾸며 모델 서버는 따로 실행합니다. |
+| 8765 포트를 다른 프로그램이 사용함 | 해당 프로그램을 확인하거나 `.venv/bin/python server.py --port 8766`으로 앱만 다른 포트에 띄웁니다. 이때 브라우저 주소도 8766으로 바꾸며 모델 서버는 따로 실행합니다. |
 | 다운로드가 자동으로 시작되지 않음 | 화면에 나타나는 ‘준비된 파일 저장’ 링크를 직접 누릅니다. |
 | 새로고침 후 결과가 사라짐 | 자동 저장을 하지 않는 현재 동작입니다. 다음 평가부터 실험·결과를 내려받아 보관하세요. |
 
@@ -281,14 +308,14 @@ evaluation-metrics.js가 지표 계산 → 표·그래프로 표시
 
 ### 자동 테스트
 
-모델을 설치하거나 내려받지 않고 앱의 계산·응답 검증·오류 처리를 확인할 수 있습니다.
+`python3 bootstrap.py`로 환경을 준비한 뒤 아래 명령으로 앱의 계산·응답 검증·오류 처리를 확인할 수 있습니다. 모델 다운로드는 필요 없습니다.
 
 ```sh
-python3 -m unittest discover -s tests -p 'test_*.py'
+.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 node --test tests/*.test.cjs
 ```
 
-JavaScript 테스트에만 Node.js 18 이상이 필요합니다. 앱 사용자에게는 필요 없습니다. 현재 테스트는 Python 30개와 JavaScript 13개입니다. 테스트 통과는 앱 구현을 확인한 것이며, 특정 모델의 업무 정확도를 보장하지 않습니다.
+JavaScript 테스트에만 Node.js 18 이상이 필요합니다. 앱 사용자에게는 필요 없습니다. 현재 테스트는 Python 38개와 JavaScript 13개입니다. Python 테스트에는 실제 임시 venv의 생성·재사용, 공백·한글 경로, 기존 환경 보존과 실행 인자 전달 검증이 포함됩니다. 테스트 통과는 앱 구현을 확인한 것이며, 특정 모델의 업무 정확도를 보장하지 않습니다.
 
 다른 폴더에서 실행하는 기본 동작과 ZIP 구성을 검증했습니다. **별도의 두 번째 실물 Mac에서 모든 모델을 설치·실행한 검증은 아직 아닙니다.** 과거 모델 실행 기록도 특정 날짜의 작은 가상 예제 결과이므로 모델 순위로 일반화하지 않습니다.
 
@@ -300,7 +327,7 @@ JavaScript 테스트에만 Node.js 18 이상이 필요합니다. 앱 사용자�
 - [Git 업로드 안내](docs/git-guide.md): 첫 저장소 연결, 변경 저장, ZIP 배포.
 - [출처 목록](report/sources.json): 리포트 조사 당시 원문 주소와 조회 상태. `ok: false` 항목은 근거가 확보된 것으로 취급하지 않습니다.
 
-보고서 생성용 `report/build_report.py`는 앱과 분리된 개발 도구입니다. `python-docx`가 필요하며 `verification/example-comparison.json`의 과거 가상 문서 실행 기록을 읽습니다. 수정 후 `python3 report/build_report.py`로 Word를 만들 수 있지만 **PDF는 자동 갱신되지 않습니다.** Word나 별도 문서 렌더러로 다시 내보내고 페이지 배치를 확인하세요. 문서용 글꼴 파일은 저장소에 포함하지 않습니다.
+보고서 생성용 `report/build_report.py`는 앱과 분리된 개발 도구입니다. 필요한 경우에만 `.venv/bin/python -m pip install python-docx`로 문서 패키지를 이 환경에 설치합니다. 앱 실행에는 이 패키지가 필요 없습니다. 생성기는 `verification/example-comparison.json`의 과거 가상 문서 실행 기록을 읽습니다. 수정 후 `.venv/bin/python report/build_report.py`로 Word를 만들 수 있지만 **PDF는 자동 갱신되지 않습니다.** Word나 별도 문서 렌더러로 다시 내보내고 페이지 배치를 확인하세요. 문서용 글꼴 파일은 저장소에 포함하지 않습니다.
 
 ### 문서는 어디로 전송되나요?
 

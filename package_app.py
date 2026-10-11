@@ -12,6 +12,7 @@ BASE = [
     "README.md",
     "server.py",
     "evaluation.py",
+    "bootstrap.py",
     "run.py",
     "setup_mac.py",
     "package_app.py",

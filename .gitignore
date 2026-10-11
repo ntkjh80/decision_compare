@@ -34,6 +34,7 @@ decision-lab-comparison*.json
 __pycache__/
 *.py[cod]
 .venv/
+.venv-backup*/
 venv/
 node_modules/
 .pytest_cache/

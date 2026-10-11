@@ -59,12 +59,13 @@
 
 | 파일 | 하는 일 |
 |---|---|
-| `setup.command` → `setup_mac.py` | Python·Ollama·Mac 지원 조건 확인, 고정된 Ollaya 0.9.0 배포 파일의 체크섬 검증, 기본 모델 준비 |
-| `start.command` → `run.py` | 이미 실행 중인 서버 재사용, 필요할 때 서버 시작, 브라우저 열기, 직접 시작한 프로세스 종료 |
+| `bootstrap.py` | `.venv`를 없을 때 생성하고 정상 환경을 재사용. 실제 Python의 경로·버전과 환경 분리를 검사하고 지정한 앱 파일로 교체 실행 |
+| `setup.command` → `bootstrap.py` → `setup_mac.py` | Python·Ollama·Mac 지원 조건 확인, 고정된 Ollaya 0.9.0 배포 파일의 체크섬 검증, 기본 모델 준비 |
+| `start.command` → `bootstrap.py` → `run.py` | 이미 실행 중인 서버 재사용, 필요할 때 서버 시작, 브라우저 열기, 직접 시작한 프로세스 종료 |
 | `server.py` | 정적 화면·API·다운로드 제공. `--port`로 앱 포트를 지정할 수 있음 |
 | `package_app.py` | 허용된 코드·설명·예제·리포트를 ZIP으로 묶음. 임시 ZIP 완성 후 교체 |
 
-경로는 각 파일의 위치를 기준으로 계산하므로 특정 사용자 이름이나 기존 프로젝트 경로가 필요하지 않습니다. `run.py`는 이미 실행 중인 8765 앱 서버도 재사용하므로 다른 복사본을 시험할 때에는 기존 서버를 먼저 종료하거나 새 복사본의 서버를 다른 포트로 띄우세요.
+앱 코드 경로는 각 파일의 위치를 기준으로 계산하므로 특정 사용자 이름이나 기존 프로젝트 경로가 필요하지 않습니다. `.venv` 자체는 이동할 수 없으므로 다른 폴더·Mac에서는 새로 만듭니다. `run.py`는 이미 실행 중인 8765 앱 서버도 재사용하므로 다른 복사본을 시험할 때에는 기존 서버를 먼저 종료하거나 새 복사본의 서버를 다른 포트로 띄우세요.
 
 ## 7. 무엇을 어디서 고치나요?
 
@@ -76,6 +77,7 @@
 | 정확도·보정·ROC 계산 | `dist/evaluation-metrics.js`와 `tests/evaluation.test.cjs` |
 | 모델 요청·응답 지원 | `evaluation.py`와 `tests/test_evaluation.py` |
 | 연결 허용 범위·한 건 검토 | `server.py`와 `tests/test_server.py` |
+| Python 가상환경 준비·진입 파일 실행 | `bootstrap.py`와 `tests/test_bootstrap.py` |
 | 기본 모델·실행기 버전 | `setup_mac.py`의 `MODEL_GROUPS`, 버전·체크섬 상수 |
 | 배포에 포함할 파일 | `package_app.py` |
 | 종합 Word 리포트 | `report/build_report.py` — 별도 문서 생성 도구 |

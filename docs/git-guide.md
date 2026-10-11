@@ -68,21 +68,22 @@ git commit -m "Improve evaluation guidance"
 git push
 ```
 
-`git add` 뒤에는 실제로 수정한 파일·폴더를 적습니다. 변경 내용을 확인한 뒤 모두 포함하려면 `git add .`도 사용할 수 있습니다. ZIP을 최신으로 유지하려면 커밋과 별도로 `python3 package_app.py`를 실행합니다. ZIP은 Git 변경 목록에 나타나지 않는 것이 정상입니다.
+`git add` 뒤에는 실제로 수정한 파일·폴더를 적습니다. 변경 내용을 확인한 뒤 모두 포함하려면 `git add .`도 사용할 수 있습니다. ZIP을 최신으로 유지하려면 커밋과 별도로 `.venv/bin/python package_app.py`를 실행합니다. ZIP은 Git 변경 목록에 나타나지 않는 것이 정상입니다.
 
 ## 5. 다른 Mac에서 받기
 
 ```sh
 git clone https://github.com/YOUR_NAME/decision_model.git
 cd decision_model
-python3 setup_mac.py --check
+python3 bootstrap.py
+.venv/bin/python setup_mac.py --check
 ```
 
-이후 Finder의 `setup.command` → `start.command` 순서로 실행하거나 README의 터미널 절차를 사용합니다. 첫 복제에는 모델과 개인 실험이 포함되지 않습니다. 필요한 실험은 앱의 ‘질문·데이터 저장’ 파일을 별도로 가져와 불러옵니다.
+이후 Finder의 `setup.command` → `start.command` 순서로 실행하거나 README의 터미널 절차를 사용합니다. 첫 복제에는 `.venv`·모델·개인 실험이 포함되지 않습니다. `.venv`는 새 컴퓨터에서 다시 생성합니다. 필요한 실험은 앱의 ‘질문·데이터 저장’ 파일을 별도로 가져와 불러옵니다.
 
 ## 6. 코드와 앱 ZIP은 따로 배포합니다
 
-코드는 Git으로 관리하고, 비개발자에게 전달할 앱 묶음은 `python3 package_app.py`로 만듭니다. 생성된 `releases/decision-lab-mac.zip`을 직접 전달하거나 GitHub 등의 Release에 첨부할 수 있습니다. Release 생성과 파일 업로드는 자동으로 실행되지 않습니다.
+코드는 Git으로 관리하고, 비개발자에게 전달할 앱 묶음은 `.venv/bin/python package_app.py`로 만듭니다. 생성된 `releases/decision-lab-mac.zip`을 직접 전달하거나 GitHub 등의 Release에 첨부할 수 있습니다. Release 생성과 파일 업로드는 자동으로 실행되지 않습니다.
 
 기본 ZIP에는 모델 가중치가 없으므로 받는 사람도 처음 모델을 준비해야 합니다. 수 GB 모델을 소스 저장소에 추가할 필요는 없습니다.
 
