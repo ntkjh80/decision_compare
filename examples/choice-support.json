@@ -1,0 +1,32 @@
+[
+  {
+    "name": "중복 결제",
+    "text": "구독료가 두 번 결제됐습니다. 한 번은 환불해주세요.",
+    "expected": "billing"
+  },
+  {
+    "name": "세금계산서",
+    "text": "지난달 청구 내역과 세금계산서를 보내주세요.",
+    "expected": "billing"
+  },
+  {
+    "name": "저장 오류",
+    "text": "보고서 저장 버튼을 누르면 오류가 발생합니다.",
+    "expected": "technical"
+  },
+  {
+    "name": "검색 장애",
+    "text": "검색어를 입력해도 검색 결과가 전혀 나오지 않습니다.",
+    "expected": "technical"
+  },
+  {
+    "name": "이메일 변경",
+    "text": "계정에 등록된 이메일 주소를 변경하고 싶습니다.",
+    "expected": "account"
+  },
+  {
+    "name": "로그인 복구",
+    "text": "비밀번호를 잊었습니다. 계정에 다시 로그인하는 방법을 알려주세요.",
+    "expected": "account"
+  }
+]

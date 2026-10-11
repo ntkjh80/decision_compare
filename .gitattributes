@@ -1,0 +1,18 @@
+# Mac 실행 스크립트와 소스의 줄바꿈을 LF로 보존합니다.
+* text=auto
+*.command text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.cjs text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.svg text eol=lf
+
+# 문서·이미지는 텍스트처럼 변환하거나 줄 단위로 비교하지 않습니다.
+*.docx binary
+*.pdf binary
+*.jpg binary
+*.png binary
+*.zip binary

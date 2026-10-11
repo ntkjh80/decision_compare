@@ -1,0 +1,61 @@
+# 큰 모델과 이 컴퓨터에 설치한 실행기는 각 사용자가 따로 준비합니다.
+/.models/
+/.ollaya-models/
+/.runtime/
+/installed-models.json
+*.gguf
+*.safetensors
+*.onnx
+*.ckpt
+*.pt
+*.pth
+
+# 개인 문서, 평가 결과, 수집 원문은 기본적으로 저장소에 올리지 않습니다.
+/data/
+/experiments/
+/results/
+/exports/
+/local-artifacts/
+decision-experiment-*.json
+decision-results-*.json
+decision-metrics-*.csv
+decision-lab-comparison*.json
+# 보고서를 만드는 데 쓰는 가상 예제의 과거 실행 기록만 예외로 보관합니다.
+/verification/*
+!/verification/example-comparison.json
+
+# ZIP은 package_app.py로 다시 만들거나 저장소의 Release에 별도 첨부합니다.
+/releases/
+*.zip
+*.tgz
+*.tar.gz
+
+# 개발 환경과 임시 파일
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+*.tmp
+*.bak
+.DS_Store
+._*
+Thumbs.db
+.idea/
+.vscode/
+~$*
+/report/qa/
+
+# 인증정보와 개인 도구 설정
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.aws/
+.openai/
+.codex/

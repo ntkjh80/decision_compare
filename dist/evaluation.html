@@ -1,0 +1,1772 @@
+<!doctype html>
+<!--
+자유 성능평가 페이지의 정적 뼈대. 실제 입력 행·모델 카드·그래프는 evaluation.js가 생성한다.
+HTML의 id를 바꾸면 연결된 JavaScript의 조회 이름도 함께 바꿔야 한다.
+-->
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>자유 성능평가 · 판단 실험실</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/evaluation.css" />
+    <!--
+스크립트 순서: 계산 모듈 → 화면 제어기. defer는 HTML 해석 완료 뒤 선언 순서대로 실행한다.
+공통 styles.css 뒤 evaluation.css를 로드해 이 페이지의 배치만 덮어쓴다.
+-->
+    <script src="/evaluation-metrics.js" defer></script>
+    <script src="/evaluation.js" defer></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="/"
+        ><span class="brand-icon">分</span
+        ><span>판단 실험실<small>DECISION LAB</small></span></a
+      >
+      <div class="side-label">MY WORKSPACE</div>
+      <nav aria-label="주요 메뉴">
+        <a class="nav-item" href="/">▤ 기밀 문서 검토</a
+        ><a class="nav-item active" href="/evaluation" aria-current="page"
+          >◉ 자유 성능평가</a
+        ><a class="nav-item" href="#results">↗ 평가 결과</a
+        ><a class="nav-item" href="#metric-guide">◈ 지표 읽는 법</a
+        ><a class="nav-item" href="#portable">⌂ 다른 Mac에서 실행</a>
+      </nav>
+      <div class="side-note">
+        <span class="local-symbol">⌂</span
+        ><strong>질문은 자유롭게, 비교는 같은 조건으로</strong>
+        <p>
+          내 PC의 모델에만 입력합니다. 새로고침 전 설정과 결과를 내려받으세요.
+          저장 링크는 10분 동안 유효합니다.
+        </p>
+      </div>
+    </aside>
+    <div class="shell">
+      <header class="topbar">
+        <span>워크스페이스 / 자유 성능평가</span
+        ><span class="local-pill">● LOCAL ONLY</span>
+      </header>
+      <main class="eval-main">
+        <section class="eval-hero">
+          <div>
+            <div class="eyebrow">BUILD YOUR OWN BENCHMARK</div>
+            <h1>어떤 판단을<br />맡겨도 될까요?</h1>
+            <p>
+              질문과 정답을 직접 정하고, 모델의 정확함·확신·속도를 함께
+              비교하세요.
+            </p>
+          </div>
+          <div class="hero-note">
+            <strong
+              >01 질문 만들기 → 02 같은 데이터로 실행 → 03 결과 비교</strong
+            >
+            <p>
+              기밀 검토뿐 아니라 문의 분류, 긴급도, 명제 확인까지.<br />실행한
+              결과만 표시하며, 정답이 없는 입력은 정확도를 채점하지 않습니다.
+            </p>
+          </div>
+        </section>
+        <div
+          id="download-ready"
+          class="download-ready"
+          role="status"
+          hidden
+        ></div>
+        <div id="eval-error" class="error-banner" role="alert" hidden></div>
+        <!--
+01. 실험 정의: 카테고리·질문·선택지·입력·정답. 정답은 모델 요청에 포함하지 않는다.
+질문·데이터 저장은 원문을 포함하는 재실행용 파일이며 결과 내보내기와 다르다.
+-->
+        <section class="eval-panel" id="experiment">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">01 / QUESTION</span>
+              <h2>판단의 모양을 선택하세요</h2>
+            </div>
+            <div class="toolbar">
+              <button class="secondary" id="save-experiment">
+                질문·데이터 저장</button
+              ><label class="secondary upload-label"
+                >실험 불러오기<input
+                  type="file"
+                  id="load-experiment"
+                  accept=".json"
+                  hidden
+              /></label>
+            </div>
+          </div>
+          <div class="category-tabs" role="group" aria-label="질문 카테고리">
+            <button
+              data-category="choice"
+              class="category-card active"
+              aria-pressed="true"
+            >
+              <span>Choice</span><strong>여러 선택지 중 하나</strong
+              ><small>문의 부서, 문서 종류, 다음 행동</small></button
+            ><button
+              data-category="score"
+              class="category-card"
+              aria-pressed="false"
+            >
+              <span>Score</span><strong>정해진 단계로 점수</strong
+              ><small>긴급도, 만족도, 위험 수준</small></button
+            ><button
+              data-category="noul"
+              class="category-card"
+              aria-pressed="false"
+            >
+              <span>Noul</span><strong>명제가 참일 확률</strong
+              ><small>환불 요청인가? 기밀이 있는가?</small>
+            </button>
+          </div>
+          <p id="category-help" class="help"></p>
+          <div class="question-grid">
+            <label
+              >모델에게 물어볼 질문 또는 명제<textarea
+                id="eval-question"
+                rows="4"
+                maxlength="2000"
+              ></textarea></label
+            ><label
+              ><span id="criteria-title">선택지 · ID = 의미, 한 줄에 하나</span
+              ><textarea id="eval-criteria" rows="5"></textarea
+              ><small id="criteria-help"></small
+            ></label>
+          </div>
+          <div class="section-head dataset-head">
+            <div>
+              <h3>같은 입력과 정답</h3>
+              <p class="help">
+                정답은 선택 사항입니다. 입력 1건당 12,000자, 최대 100건. 질문을
+                바꾸면 정답도 다시 확인하세요.
+              </p>
+            </div>
+            <div class="toolbar">
+              <button class="secondary" id="load-samples">
+                이 유형의 예제 넣기</button
+              ><label class="secondary upload-label"
+                >데이터 JSON 읽기<input
+                  id="dataset-upload"
+                  type="file"
+                  accept=".json"
+                  hidden /></label
+              ><button class="secondary" id="add-row">＋ 입력 추가</button>
+            </div>
+          </div>
+          <!--
+동적 문서 편집기 삽입 위치. 정답 미지정은 null이며 오답으로 채점하지 않는다.
+-->
+          <div id="dataset-editor"></div>
+          <details class="help-details">
+            <summary>JSON 데이터 형식 · 정답 지정 방법</summary>
+            <p>
+              배열로 작성하세요:
+              <code
+                >[{"name":"결제
+                문의","text":"환불해주세요","expected":"billing"}]</code
+              >. Choice 정답은 선택지 ID, Score는 0부터 시작하는 숫자, Noul은
+              true 또는 false입니다. 정답이 없으면 null입니다. Score의 소수
+              정답은 MAE·RMSE만 채점합니다.
+            </p>
+          </details>
+        </section>
+        <!--
+02. 모델과 추론 조건. 설치 목록 조회와 실제 평가는 별도 동작이다.
+준비 실행은 통계에서 제외하며 실제 평가는 모델별로 한 건씩 순차 실행한다.
+-->
+        <section class="eval-panel">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">02 / MODELS & SETTINGS</span>
+              <h2>비교할 로컬 모델과 실행 조건</h2>
+            </div>
+            <button id="discover-models" class="secondary">
+              설치된 모델 찾기
+            </button>
+          </div>
+          <div class="connection-grid">
+            <label
+              >Ollama 주소<input
+                id="eval-ollama"
+                value="http://127.0.0.1:11434" /></label
+            ><label
+              >Ollaya 주소<input
+                id="eval-ollaya"
+                value="http://127.0.0.1:11435"
+            /></label>
+          </div>
+          <p id="model-message" class="help" role="status">
+            모델 찾기를 누르면 설치된 모든 로컬 모델을 선택할 수 있습니다.
+          </p>
+          <div id="eval-models" class="eval-models"></div>
+          <details class="help-details">
+            <summary>다른 로컬 모델 직접 추가</summary>
+            <div class="custom-model-grid">
+              <label
+                >실행 도구<select id="custom-provider">
+                  <option value="ollaya">Ollaya · 전용 판단</option>
+                  <option value="ollama">Ollama · 일반 LLM</option>
+                  <option value="llama">llama.cpp · 호환 서버</option>
+                </select></label
+              ><label
+                >서버 주소<input
+                  id="custom-base"
+                  value="http://127.0.0.1:11435" /></label
+              ><label
+                >모델 이름<input
+                  id="custom-name"
+                  placeholder="예: kev:4b" /></label
+              ><button class="secondary" id="add-model">모델 추가</button>
+            </div>
+            <p>
+              JevK5와 TypeSafe의 클라우드 Jev는 다른 모델입니다. 이 페이지는
+              로컬 서버만 연결합니다. 모델을 추가해도 자동 다운로드하지
+              않습니다.
+            </p>
+          </details>
+          <div class="settings-grid">
+            <label
+              >문서당 반복 횟수<input
+                id="eval-repeats"
+                type="number"
+                min="1"
+                max="10"
+                value="1"
+              /><small
+                >총 1,000회까지 · 반복을 독립 표본으로 해석하지 마세요.</small
+              ></label
+            ><label
+              >모델별 준비 실행<select id="eval-warmup">
+                <option value="0">없음 · 첫 로딩 포함</option>
+                <option value="1">1회 · 준비 요청은 집계 제외</option></select
+              ><small>첫 문서로 실행하며, 실패 여부도 표시합니다.</small></label
+            ><label
+              >문서 실행 순서<select id="eval-order">
+                <option value="fixed">입력 순서</option>
+                <option value="shuffle">고정 시드로 섞기</option></select
+              ><small>모든 모델에 같은 순서를 적용합니다.</small></label
+            ><label
+              >순서 시드<input
+                id="eval-seed"
+                type="number"
+                min="0"
+                max="2147483647"
+                value="42" /></label
+            ><label
+              >응답 제한 시간 · 초<input
+                id="eval-timeout"
+                type="number"
+                min="10"
+                max="300"
+                value="120" /></label
+            ><label
+              >Ollama 입력 공간 · 토큰<input
+                id="eval-context"
+                type="number"
+                min="2048"
+                max="32768"
+                value="8192"
+              /><small>전용 모델은 자체 입력 한도를 사용합니다.</small></label
+            ><label
+              >토큰 확률 보정 온도<input
+                id="eval-temperature"
+                type="number"
+                min="0.1"
+                max="5"
+                step="0.1"
+                value="1"
+              /><small>Ollama·llama.cpp 토큰 방식에만 적용됩니다.</small></label
+            >
+          </div>
+          <div class="run-strip">
+            <p>
+              모델별로 순차 실행합니다. 동일한 입력이어도 실행 도구·압축·캐시가
+              다르면 속도가 달라집니다.
+            </p>
+            <button id="eval-stop" class="secondary" hidden>
+              현재 요청 후 멈추기</button
+            ><button id="eval-run" class="primary">
+              선택한 모델 평가하기 →
+            </button>
+          </div>
+          <div id="eval-progress" role="status" aria-live="polite">
+            아직 실행하지 않았습니다.
+          </div>
+          <progress id="eval-progress-bar" max="1" value="0"></progress>
+        </section>
+        <!--
+03. 실행 당시 조건과 모델별 결과. result-controls는 첫 실행 후 나타난다.
+이 영역의 임계값·ECE 구간 수는 저장한 응답을 재집계하며 모델을 다시 부르지 않는다.
+-->
+        <section class="eval-panel" id="results">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">03 / RESULTS</span>
+              <h2>정확도 하나로는 보이지 않는 차이</h2>
+            </div>
+            <div class="toolbar">
+              <button id="export-results" class="secondary" disabled>
+                결과 JSON</button
+              ><button id="export-csv" class="secondary" disabled>
+                지표 CSV
+              </button>
+            </div>
+          </div>
+          <p id="run-snapshot" class="help">
+            평가를 실행하면 모델별 결과와 그래프가 나타납니다.
+          </p>
+          <div id="result-controls" hidden>
+            <div class="settings-grid result-settings">
+              <label
+                >Noul 참 판정 기준<input
+                  id="metric-threshold"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value="0.5" /></label
+              ><label
+                >인간 검토 시작 · 확신도 미만<input
+                  id="metric-referral"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value="0.6" /></label
+              ><label
+                >검토율·Confidence ECE에 쓸 값<select id="metric-basis">
+                  <option value="api">API Confidence · 없으면 선택 확률</option>
+                  <option value="probability">선택한 답의 확률</option>
+                </select></label
+              ><label
+                >ECE 구간 수<select id="metric-bins">
+                  <option>5</option>
+                  <option selected>10</option>
+                  <option>15</option>
+                  <option>20</option>
+                </select></label
+              ><label
+                >ROC에서 양성으로 볼 선택지<select id="metric-positive"></select
+              ></label>
+            </div>
+            <p class="help">
+              이 설정은 현재 결과를 다시 집계합니다. 재추론하지 않습니다. Noul
+              기준은 선택 확률과 검토율에도 영향을 줍니다. 기준을 맞춘 문서와
+              최종 채점 문서를 나누세요.
+            </p>
+            <div class="metric-inline-help" aria-label="결과 설정 도움말">
+              <button
+                type="button"
+                class="metric-help-link"
+                data-metric-help="guide-thresholds"
+              >
+                판정 기준과 검토 기준의 차이</button
+              ><button
+                type="button"
+                class="metric-help-link"
+                data-metric-help="guide-confidence"
+              >
+                확률과 Confidence의 차이</button
+              ><button
+                type="button"
+                class="metric-help-link"
+                data-metric-help="guide-ece"
+              >
+                ECE 구간이란?
+              </button>
+            </div>
+            <div id="eval-summary" class="eval-summary"></div>
+            <div
+              id="model-scorecards"
+              class="inspect-grid model-scorecards"
+            ></div>
+            <details class="metric-table-details">
+              <summary>모든 평가지표 비교표</summary>
+              <p class="help">
+                지표 이름 옆 ⓘ를 누르면 쉬운 뜻·숫자 예시·해석 방법을 바로 볼 수
+                있습니다.
+              </p>
+              <div class="table-scroll"><table id="metrics-table"></table></div>
+            </details>
+            <div class="chart-grid">
+              <article>
+                <div class="metric-chart-heading">
+                  <h3>확신과 실제 정답률 · Reliability</h3>
+                  <button
+                    type="button"
+                    class="metric-help-link"
+                    data-metric-help="guide-reliability"
+                    aria-label="신뢰도 그래프 설명 보기"
+                  >
+                    설명
+                  </button>
+                </div>
+                <label class="compact-label"
+                  >그래프 기준<select id="calibration-view">
+                    <option value="prob">선택 확률 ECE</option>
+                    <option value="confidence">Confidence ECE · 진단용</option>
+                  </select></label
+                >
+                <div id="calibration-chart"></div>
+                <p class="help">
+                  대각선에 가까울수록 눈금과 실제 정답률이 맞습니다. 구간 표본이
+                  적으면 흔들립니다.
+                </p>
+              </article>
+              <article>
+                <div class="metric-chart-heading">
+                  <h3>놓침과 오탐의 균형 · ROC</h3>
+                  <button
+                    type="button"
+                    class="metric-help-link"
+                    data-metric-help="guide-roc"
+                    aria-label="ROC 곡선 설명 보기"
+                  >
+                    설명
+                  </button>
+                </div>
+                <div id="roc-chart"></div>
+                <p class="help">
+                  가로는 거짓 양성률, 세로는 재현율입니다. 양성·음성 정답이 모두
+                  있어야 그립니다. Choice·Score는 선택지 하나 대 나머지입니다.
+                </p>
+              </article>
+              <article>
+                <div class="metric-chart-heading">
+                  <h3>검토를 줄일 때 남는 실수 · Coverage–Risk</h3>
+                  <button
+                    type="button"
+                    class="metric-help-link"
+                    data-metric-help="guide-risk"
+                    aria-label="Coverage–Risk 설명 보기"
+                  >
+                    설명
+                  </button>
+                </div>
+                <div id="risk-chart"></div>
+                <p class="help">
+                  정답 있는 성공 응답 기준. 가로는 자동 처리 비율, 세로는 자동
+                  처리된 답의 오답률입니다.
+                </p>
+              </article>
+              <article>
+                <div class="metric-chart-heading">
+                  <h3>종단간 응답 시간 · p50 / p95</h3>
+                  <button
+                    type="button"
+                    class="metric-help-link"
+                    data-metric-help="guide-latency"
+                    aria-label="응답 시간 설명 보기"
+                  >
+                    설명
+                  </button>
+                </div>
+                <div id="latency-chart"></div>
+                <p class="help">
+                  브라우저 요청부터 응답까지. 실패 요청도 포함하며 준비 실행은
+                  제외합니다. p95는 95%가 이 시간 이내에 끝났다는 뜻입니다.
+                </p>
+              </article>
+            </div>
+            <div class="section-head">
+              <h3>문서 하나를 골라 나란히 비교</h3>
+              <select
+                id="inspect-document"
+                aria-label="비교할 평가 문서"
+              ></select>
+            </div>
+            <!--
+문서 하나·같은 반복 번호의 모든 모델 응답을 나란히 보여주는 삽입 위치.
+-->
+            <div id="inspect-results" class="inspect-grid"></div>
+            <details class="help-details">
+              <summary>클래스별 Precision · Recall · F1과 혼동행렬</summary>
+              <div class="metric-inline-help">
+                <button
+                  type="button"
+                  class="metric-help-link"
+                  data-metric-help="guide-precision"
+                >
+                  Precision 정밀도</button
+                ><button
+                  type="button"
+                  class="metric-help-link"
+                  data-metric-help="guide-recall"
+                >
+                  Recall 재현율</button
+                ><button
+                  type="button"
+                  class="metric-help-link"
+                  data-metric-help="guide-f1"
+                >
+                  F1과 macro-F1</button
+                ><button
+                  type="button"
+                  class="metric-help-link"
+                  data-metric-help="guide-confusion"
+                >
+                  혼동행렬 읽기
+                </button>
+              </div>
+              <div id="class-details"></div>
+            </details>
+            <details class="help-details">
+              <summary>ECE 구간별 표본 수 · 평균 확신 · 정답률</summary>
+              <div id="bin-details"></div>
+            </details>
+            <details class="help-details">
+              <summary>임계값별 ROC 수치</summary>
+              <div id="roc-details"></div>
+            </details>
+            <details class="help-details">
+              <summary>실패 유형과 준비 실행 기록</summary>
+              <div id="failure-details"></div>
+            </details>
+          </div>
+        </section>
+        <!--
+지표 정의 안내. 지표를 추가하거나 분모를 바꿀 때 evaluation-metrics.js 및 이 안내를 함께 확인한다.
+-->
+        <section
+          class="eval-panel metric-guide"
+          id="metric-guide"
+          aria-labelledby="metric-guide-title"
+        >
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">UNDERSTAND YOUR RESULTS</span>
+              <h2 id="metric-guide-title">평가 지표, 숫자 예시로 이해하기</h2>
+            </div>
+            <div class="toolbar">
+              <button type="button" class="secondary" id="expand-metric-guide">
+                모두 펼치기</button
+              ><button
+                type="button"
+                class="secondary"
+                id="collapse-metric-guide"
+              >
+                모두 접기
+              </button>
+            </div>
+          </div>
+          <p class="metric-guide-intro">
+            결과표에서 <strong>지표 이름 ⓘ</strong>를 누르면 설명을 바로 볼 수
+            있습니다. 아래 예시는 이해를 돕기 위한 가상의 숫자이며, 내 모델의
+            측정 결과가 아닙니다.
+          </p>
+          <div class="metric-start-grid">
+            <article>
+              <span>Choice · 선택지 고르기</span>
+              <h3>부서를 제대로 골랐나요?</h3>
+              <p>
+                Accuracy와 macro-F1로 맞힌 정도를 보고, 클래스별 Recall로 유독
+                놓치는 부서가 있는지 확인하세요.
+              </p>
+            </article>
+            <article>
+              <span>Score · 단계로 점수 매기기</span>
+              <h3>정답 점수에서 얼마나 멀까요?</h3>
+              <p>
+                MAE·RMSE로 점수 차이를 먼저 보세요. 가장 높은 확률의 단계가
+                맞았는지는 분류 지표로 따로 봅니다.
+              </p>
+            </article>
+            <article>
+              <span>Noul · 명제 확인하기</span>
+              <h3>참인 사례를 잘 찾나요?</h3>
+              <p>
+                Precision·Recall로 오탐과 놓침을 살펴보세요. ROC·AP는 판정
+                기준을 바꿀 때의 선택을 돕습니다.
+              </p>
+            </article>
+          </div>
+          <nav class="metric-guide-nav" aria-label="평가 지표 설명 목차">
+            <a href="#guide-samples">표본과 분모</a
+            ><a href="#guide-accuracy">정확도</a
+            ><a href="#guide-confidence">확률과 확신</a
+            ><a href="#guide-schema">형식과 실패</a
+            ><a href="#guide-latency">응답 속도</a
+            ><a href="#guide-referral">사람 검토</a
+            ><a href="#guide-roc">ROC·AP</a><a href="#guide-score">점수 오차</a>
+          </nav>
+          <p class="metric-reading-key">
+            <strong>↑ 높을수록 좋은 지표 · ↓ 낮을수록 좋은 지표</strong
+            ><br />검토율·자동 처리 비율은 정확도와 함께 판단해야 합니다.
+            <strong>—</strong>는 0점이 아니라 계산할 자료가 없다는 뜻입니다.
+            모든 업무에 통하는 합격선은 없습니다.
+          </p>
+
+          <h3 class="metric-group-title">
+            먼저, 무엇을 몇 건으로 나눴는지 확인하세요
+          </h3>
+          <details class="metric-explainer" id="guide-samples">
+            <summary>
+              <span class="metric-name">표본 수와 분모</span
+              ><span class="metric-one-line"
+                >같은 80%라도 8/10과 800/1,000은 다릅니다</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 표본은 계산에 사용한 사례이고,
+                분모는 비율을 구할 때 나누는 전체 건수입니다. 지표마다 필요한
+                자료가 달라 분모도 달라집니다.
+              </p>
+              <ul>
+                <li>
+                  <strong>완료한 요청</strong>: 실제 응답을 받거나 실패로 끝난
+                  요청. 중단해서 실행하지 않은 건은 제외합니다.
+                </li>
+                <li>
+                  <strong>유효한 응답</strong>: 필요한 답과 확률 형식 검사를
+                  통과한 결과. 유효하다고 정답인 것은 아닙니다.
+                </li>
+                <li>
+                  <strong>채점 성공 / 정답 요청</strong>: 분류 정답이 있는 유효
+                  응답 수 / 분류 정답이 있는 전체 실행 요청 수입니다.
+                </li>
+                <li>
+                  <strong>시간 표본</strong>: 종단간 시간이 측정된 요청 수. 실패
+                  요청도 포함합니다.
+                </li>
+                <li>
+                  <strong>점수 정답 표본</strong>: Score의 수치 오차를 계산할 수
+                  있는 유효 응답 수. 소수 정답도 포함합니다.
+                </li>
+              </ul>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  문서 10건을 모델별로 3번 실행하면 각 모델의 요청은 30건입니다.
+                  하지만 서로 다른 문서는 여전히 10건입니다. 같은 문서를 반복한
+                  30건을 새로운 문서 30건처럼 해석하면 안 됩니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 준비 실행은 별도 기록하며 모든 성능
+                지표에서 제외합니다. 정답 미지정 입력은 속도·실패·검토율에는
+                쓰지만 정확도에는 넣지 않습니다.
+              </p>
+              <p class="metric-caution">
+                표본 수뿐 아니라 실제 업무의 문서 길이·언어·클래스 비율도 맞춰야
+                합니다. 적은 표본에서 나온 100%를 새 문서에 대한 보장으로 읽지
+                마세요.
+              </p>
+            </div>
+          </details>
+
+          <h3 class="metric-group-title">01 / 정답을 얼마나 잘 맞히나요?</h3>
+          <details class="metric-explainer" id="guide-accuracy" open>
+            <summary>
+              <span class="metric-name">Accuracy · 정확도</span
+              ><span class="metric-one-line"
+                >전체 채점 결과 중 맞힌 비율 · ↑</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 시험에서 몇 문제를 맞혔는지입니다.
+                사람이 정한 정답과 모델의 최종 선택이 같은지 비교합니다.
+              </p>
+              <div class="metric-formula">
+                정확도 = 맞힌 건수 ÷ 정답이 있는 유효 응답 수
+              </div>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  정답을 아는 문서 100건에서 모델이 모두 유효한 응답을 내고
+                  88건을 맞혔다면 정확도는 <strong>88%</strong>입니다.
+                </p>
+              </div>
+              <p>
+                <strong>함께 볼 것</strong> 문의 100건 중 결제 문의가 95건이면,
+                무조건 결제라고만 답해도 95%입니다. 드문 기술 문의를 전혀 못
+                찾을 수 있으므로 macro-F1과 클래스별 Recall도 봐야 합니다.
+              </p>
+              <p>
+                <strong>이 앱에서는</strong> 정답 없는 입력과 실패한 요청은 이
+                분모에서 빠집니다. 실패가 많은 모델은 아래 ‘실패 포함 정답률’도
+                꼭 확인하세요. Score의 분류 정답은 정수 단계만 사용합니다.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-effective">
+            <summary>
+              <span class="metric-name">실패 포함 정답률</span
+              ><span class="metric-one-line"
+                >요청한 일 중 실제로 맞게 끝낸 비율 · ↑</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 답한 문제만의 점수가 아니라, 답을
+                못 낸 문제까지 포함한 완료 성적입니다. 타임아웃이나 잘못된
+                출력이 많은 모델을 놓치지 않게 합니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  정답이 있는 요청 100건 중 10건이 실패하고, 나머지 90건 중
+                  72건을 맞혔다고 해봅시다.
+                </p>
+                <ul>
+                  <li>Accuracy: 72 ÷ 90 = <strong>80%</strong></li>
+                  <li>실패 포함 정답률: 72 ÷ 100 = <strong>72%</strong></li>
+                </ul>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 실제 실행한 요청 중 분류 정답이
+                있는 건만 분모에 넣습니다. 정답 미지정과 아직 실행하지 않은 건을
+                실패로 가정하지 않습니다.
+              </p>
+              <p class="metric-caution">
+                같은 입력·모델 수·반복 조건으로 실행하고 전체 실패율도 함께
+                비교하세요. 이 이름은 이 앱이 운영상의 성공 정도를 보여주기 위해
+                붙인 지표입니다.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-confusion">
+            <summary>
+              <span class="metric-name">혼동행렬 · TP / FP / FN / TN</span
+              ><span class="metric-one-line"
+                >어떤 종류의 실수를 했는지 펼쳐 보는 표</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 실제 정답과 모델 답을 교차시킨
+                표입니다. 아래에서는 ‘환불 요청’을 <strong>양성</strong>으로
+                정합니다. 양성은 좋은 결과라는 뜻이 아니라, 지금 찾으려는
+                종류라는 뜻입니다.
+              </p>
+              <div class="table-scroll">
+                <table class="metric-example-table">
+                  <caption>
+                    가상 문의 100건 · 모두 유효 응답이며 정답을 알고 있음
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">실제 정답 ↓ / 모델 답 →</th>
+                      <th scope="col">환불 요청</th>
+                      <th scope="col">환불 아님</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">실제 환불 20건</th>
+                      <td><strong>16 · TP</strong><br />제대로 찾음</td>
+                      <td><strong>4 · FN</strong><br />놓침</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">실제 비환불 80건</th>
+                      <td><strong>8 · FP</strong><br />잘못 잡음 · 오탐</td>
+                      <td><strong>72 · TN</strong><br />제대로 제외</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                대각선의 16+72=88건은 맞힌 결과입니다. 나머지 8건과 4건은 서로
+                다른 실수입니다. 이 앱의 혼동행렬은 항상
+                <strong>행이 실제 정답, 열이 모델 예측</strong>입니다.
+              </p>
+              <p>
+                <strong>Choice에서는</strong> 결제→기술처럼 어느 부서끼리
+                혼동하는지 봅니다. 표 옆의 <strong>support</strong>는 그
+                클래스가 실제 정답인 건수, 예측 건수는 모델이 그 클래스로 답한
+                건수입니다.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-precision">
+            <summary>
+              <span class="metric-name">Precision · 정밀도</span
+              ><span class="metric-one-line"
+                >잡아낸 것 중 진짜가 얼마나 있나요? · ↑</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 모델이 ‘환불 요청’이라고 고른
+                문서들을 열어봤을 때, 정말 환불 요청인 비율입니다. 불필요한
+                알림이나 잘못된 부서 전달을 줄이고 싶을 때 봅니다.
+              </p>
+              <div class="metric-formula">
+                Precision = 제대로 찾은 양성(TP) ÷ 양성이라고 답한 건수(TP+FP)
+              </div>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  환불이라고 답한 24건 중 진짜 환불이 16건이면
+                  <strong>16 ÷ 24 ≈ 66.7%</strong>입니다. 나머지 8건은 잘못 잡은
+                  문의입니다.
+                </p>
+              </div>
+              <p>
+                <strong>함께 볼 것</strong> 매우 확실한 문서 한 건만 골라도
+                Precision은 높을 수 있습니다. 대부분의 환불 요청을 놓치는지
+                Recall을 함께 봐야 합니다.
+              </p>
+              <p>
+                <strong>이 앱에서는</strong> 클래스별로 계산합니다. 특정
+                클래스를 한 번도 예측하지 않았다면 분모가 0이므로 ‘—’로
+                표시합니다.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-recall">
+            <summary>
+              <span class="metric-name">Recall · 재현율</span
+              ><span class="metric-one-line"
+                >찾아야 할 것 중 얼마나 놓치지 않았나요? · ↑</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 실제 환불 요청을 모두 모았을 때,
+                모델이 그중 몇 건을 찾아냈는지입니다. 기밀 문서나 긴급 문의를
+                놓치는 것이 큰 문제라면 특히 중요합니다.
+              </p>
+              <div class="metric-formula">
+                Recall = 제대로 찾은 양성(TP) ÷ 실제 양성 건수(TP+FN)
+              </div>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  실제 환불 20건 중 16건을 찾았다면
+                  <strong>16 ÷ 20 = 80%</strong>입니다. 놓친 비율은 4 ÷ 20 =
+                  20%입니다.
+                </p>
+              </div>
+              <p>
+                <strong>함께 볼 것</strong> 모든 문서를 환불이라고 하면 Recall은
+                100%지만 오탐이 많아집니다. Precision과 함께 업무 비용을
+                판단하세요.
+              </p>
+              <p>
+                <strong>이 앱에서는</strong> 특정 클래스의 실제 정답이 하나도
+                없으면 Recall은 ‘—’입니다. 그 클래스를 잘 못 찾는다는 뜻이
+                아니라 시험할 정답이 없다는 뜻입니다.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-f1">
+            <summary>
+              <span class="metric-name">F1 / macro-F1</span
+              ><span class="metric-one-line"
+                >잘못 잡음과 놓침을 함께 보고, 드문 종류도 챙깁니다 · ↑</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>F1</strong>은 Precision과 Recall의 조화평균입니다. 둘 중
+                하나가 낮으면 함께 낮아져, 한쪽만 높은 모델을 구분하는 데 도움을
+                줍니다.
+              </p>
+              <div class="metric-formula">F1 = 2×TP ÷ (2×TP + FP + FN)</div>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  환불 예시에서 TP=16, FP=8, FN=4이면 F1은 32 ÷ 44 ≈
+                  <strong>0.727</strong>입니다.
+                </p>
+                <p>
+                  별도의 두 클래스 문제에서 각 F1이 0.9와 0.3이라면
+                  <strong>macro-F1 = (0.9+0.3) ÷ 2 = 0.6</strong>입니다. 문서가
+                  많은 클래스도, 적은 클래스도 같은 비중으로 평균합니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 설정한 전체 클래스의 F1을
+                평균합니다. 실제 정답도 예측도 없는 클래스의 F1은 0으로 두므로,
+                선택지만 추가하고 평가 자료를 넣지 않으면 macro-F1이 내려갈 수
+                있습니다.
+              </p>
+              <p class="metric-caution">
+                F1은 오탐과 놓침의 업무 비용을 자동으로 반영하지 않습니다. 기밀
+                누락 한 건과 불필요한 검토 한 건의 비용이 다르면 클래스별 표도
+                확인하세요.
+              </p>
+            </div>
+          </details>
+
+          <h3 class="metric-group-title">
+            02 / 모델의 확신을 얼마나 믿을 수 있나요?
+          </h3>
+          <details class="metric-explainer" id="guide-confidence">
+            <summary>
+              <span class="metric-name">선택 확률 / API Confidence</span
+              ><span class="metric-one-line"
+                >둘 다 0~1이지만 같은 숫자가 아닙니다</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>선택 확률</strong>은 모델이 고른 답에 배정한 확률입니다.
+                이 앱에서 연결하는 Ollaya 0.9.0의 Choice·Score
+                <strong>API Confidence</strong>는 최고 확률이 모든 후보가 비슷한
+                상태에서 얼마나 벗어났는지 나타내는 별도의 값입니다.
+              </p>
+              <div class="metric-formula">
+                API Confidence = (K×최고 확률 − 1) ÷ (K−1) · K는 선택지 수
+              </div>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  선택지가 3개이고 확률이 [0.8, 0.1, 0.1]이면 선택 확률은
+                  <strong>0.8</strong>, API Confidence는 (3×0.8−1) ÷ 2 =
+                  <strong>0.7</strong>입니다. 검토 기준이 0.75라면 어느 값을
+                  쓰느냐에 따라 검토 여부가 달라집니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> ‘API Confidence · 없으면 선택
+                확률’을 고르면 API 값이 있는 경우 그 값을 씁니다. Noul과 일반
+                LLM 방식에는 이 API 값이 없으므로 선택한 판정의 확률을 씁니다.
+                JSON 방식의 확률은 모델이 글로 생성한 자체 평가값입니다.
+              </p>
+              <p class="metric-caution">
+                Confidence 0.7을 ‘실제로 70% 맞는다’로 바로 읽을 수 없습니다.
+                같은 확신도를 낸 결과가 얼마나 맞았는지 ECE와 실제 정답으로
+                확인하세요. 선택지 수와 모델이 바뀌면 같은 기준도 다시 검증해야
+                합니다.
+              </p>
+              <p class="metric-source">
+                계약 확인:
+                <a
+                  href="https://github.com/ollaya-dev/ollaya/blob/v0.9.0/docs/api.md#response"
+                  target="_blank"
+                  rel="noreferrer"
+                  >Ollaya 0.9.0 응답 정의</a
+                >
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-ece">
+            <summary>
+              <span class="metric-name">선택 확률 ECE · 보정 오차</span
+              ><span class="metric-one-line"
+                >“90% 확신”한 답이 실제로도 약 90% 맞나요? · ↓</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 모델의 확률 눈금과 실제 정답률
+                사이의 차이입니다. 비슷한 확률의 답을 한 구간에 모은 뒤 평균
+                확률과 정답률을 비교합니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  모두 확률 0.9로 답한 10건 중 8건이 정답이면, 예고한 90%와 실제
+                  80%의 차이는 <strong>0.1, 즉 10%포인트</strong>입니다.
+                </p>
+                <p>
+                  다른 구간의 10건은 확률 0.6이고 6건을 맞혀 차이가 0이라고
+                  해봅시다. 전체 20건의 ECE는
+                  <strong>(10/20)×0.1 + (10/20)×0 = 0.05</strong>입니다.
+                </p>
+              </div>
+              <div class="metric-formula">
+                ECE = 구간마다 ‘전체에서 차지하는 비중 × |평균 확률 − 실제
+                정답률|’을 계산해 더한 값
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 정답이 있는 유효 응답의
+                <em>선택한 답 확률</em>을 씁니다. 구간 수는 5·10·15·20개 중
+                정하며 빈 구간은 제외합니다. 0.05는 이 구간 방식에서 평균 간격이
+                5%포인트라는 뜻이지, 오답률이 5%라는 뜻이 아닙니다.
+              </p>
+              <p class="metric-caution">
+                낮은 ECE가 높은 정확도를 보장하지 않습니다. 늘 50% 확률을 내고
+                실제로 절반 맞히는 모델도 보정은 잘 맞을 수 있습니다. 구간
+                수·표본·질문을 동일하게 두고 정확도와 함께 보세요.
+              </p>
+              <p class="metric-source">
+                정의 참고:
+                <a
+                  href="https://proceedings.mlr.press/v70/guo17a.html"
+                  target="_blank"
+                  rel="noreferrer"
+                  >Guo 외, On Calibration of Modern Neural Networks</a
+                >
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-confidence-ece">
+            <summary>
+              <span class="metric-name">Confidence ECE · 진단용</span
+              ><span class="metric-one-line"
+                >검토에 쓰는 확신도와 정답률의 간격을 봅니다</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> ECE의 계산 방법은 같고, 넣는 숫자를
+                ‘검토 기준에 사용할 확신도’로 바꾼 것입니다. API Confidence를
+                사용하면 선택 확률 ECE와 다를 수 있습니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  선택 확률 0.8, API Confidence 0.7인 답 10건에서 8건을
+                  맞혔다면, 이 한 구간의 선택 확률 ECE는 <strong>0</strong>, API
+                  Confidence로 계산한 ECE는 <strong>0.1</strong>입니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 결과 설정의 ‘검토율·Confidence
+                ECE에 쓸 값’을 따릅니다. ‘선택한 답의 확률’을 고르면 두 ECE가
+                같아집니다. Noul처럼 API Confidence가 없을 때도 선택한 판정의
+                확률로 대체합니다.
+              </p>
+              <p class="metric-caution">
+                API Confidence는 원래 정답 확률과 다른 정의입니다. 따라서 이
+                오차 하나로 모델의 확률 품질을 평가하지 말고, 실제 검토 기준을
+                정할 때 확신도와 정답률의 관계를 살피는 진단값으로 사용하세요.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-reliability">
+            <summary>
+              <span class="metric-name">Reliability · 신뢰도 그래프</span
+              ><span class="metric-one-line"
+                >과하게 자신 있는지, 지나치게 조심하는지 보입니다</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>그래프 읽기</strong> 가로축은 구간의 평균 확률/확신도,
+                세로축은 그 구간의 실제 정답률입니다. 모델별 점이 대각선에
+                가까우면 두 값이 비슷합니다.
+              </p>
+              <ul>
+                <li>
+                  <strong>대각선 아래</strong>: 예고한 값보다 덜 맞힘. 예: (0.9,
+                  0.8)은 90%라고 했지만 80%만 맞은 구간.
+                </li>
+                <li>
+                  <strong>대각선 위</strong>: 예고한 값보다 더 맞힘. 예: (0.6,
+                  0.8)은 60%라고 했지만 80% 맞은 구간.
+                </li>
+              </ul>
+              <p>
+                <strong>이 앱에서는</strong> 선택한 답의 정답 여부를 그립니다.
+                Noul에서도 항상 ‘참 확률과 참인 비율’만 그리는 방식은 아닙니다.
+                그래프 기준을 Confidence로 바꾸면 API 값이 정답 확률과 다른
+                정의라는 점도 고려하세요.
+              </p>
+              <p class="metric-caution">
+                각 점의 표본 수가 다를 수 있습니다. 아래 ‘ECE 구간별 표본 수’도
+                함께 보세요. 1건짜리 구간의 정답률 100%는 100건짜리 구간보다
+                흔들리기 쉽습니다.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-brier">
+            <summary>
+              <span class="metric-name">Brier · 확률 오차</span
+              ><span class="metric-one-line"
+                >틀린 답을 자신 있게 말할수록 큰 벌점을 받습니다 · ↓</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 확률 예측을 정답인 1 또는 0과
+                비교해 오차를 제곱한 평균입니다. 단순히 맞고 틀림을 넘어 확률을
+                얼마나 잘 배분했는지 봅니다.
+              </p>
+              <div class="metric-example">
+                <strong>Noul 한 건으로 보기</strong>
+                <p>
+                  실제로 참인 문서에 참 확률 0.9를 주면 (0.9−1)² =
+                  <strong>0.01</strong>입니다. 0.1을 주면 (0.1−1)² =
+                  <strong>0.81</strong>로 훨씬 큰 벌점을 받습니다. 전체 Brier는
+                  이런 값을 평균합니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> Noul은 참 확률 하나를 비교해 0~1,
+                Choice·Score는 모든 클래스의 제곱 오차를 합해 평균하므로 0~2
+                범위입니다. Score에서도 이 지표는 정수 정답이 있는 분류 표본만
+                사용합니다.
+              </p>
+              <p class="metric-caution">
+                Brier는 보정 오차만 측정하는 값이 아닙니다. 구별 능력도 함께
+                반영하므로 ECE와 역할이 다릅니다. 카테고리와 정답 구성, 합산
+                방식을 맞춰 비교하세요.
+              </p>
+              <p class="metric-source">
+                정의 참고:
+                <a
+                  href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.brier_score_loss.html"
+                  target="_blank"
+                  rel="noreferrer"
+                  >Brier score</a
+                >
+              </p>
+            </div>
+          </details>
+
+          <h3 class="metric-group-title">
+            03 / 실제로 쓸 수 있는 응답을 주나요?
+          </h3>
+          <details class="metric-explainer" id="guide-schema">
+            <summary>
+              <span class="metric-name">스키마 위반율 · 타입 안전성</span
+              ><span class="metric-one-line"
+                >약속한 답의 형식을 지켰나요? · ↓</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> ‘결제·기술·계정 중 하나와 숫자
+                확률을 주세요’라는 약속을 지켰는지입니다. 후보 밖 답, 숫자 대신
+                문자열, 빠진 확률, 잘못된 확률 합계 등을 확인합니다.
+              </p>
+              <div class="metric-formula">
+                스키마 위반율 = 형식을 위반한 응답 수 ÷ 형식을 검사할 수 있었던
+                응답 수
+              </div>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  100건 중 유효 응답이 90건, 형식 위반이 5건, 연결 실패가
+                  5건이면 형식 검사는 95건에서 가능합니다. 위반율은
+                  <strong>5 ÷ 95 ≈ 5.3%</strong>입니다. 연결 실패는 검사할 답이
+                  없어 이 분모에서 뺍니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 전용 API 응답도 실제로 검증합니다.
+                토큰 방식은 앱이 받은 확률로 구성한 결과를 검사하므로, 모델이
+                생성한 원문 JSON의 위반율과는 검사 대상이 다릅니다.
+              </p>
+              <p class="metric-caution">
+                형식이 맞아도 답이 틀릴 수 있습니다. 관측된 0%는 이 표본에서
+                위반이 없었다는 뜻이며 미래의 실패까지 보장하지 않습니다.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-failure">
+            <summary>
+              <span class="metric-name">전체 실패율</span
+              ><span class="metric-one-line"
+                >요청 중 사용할 답을 받지 못한 비율 · ↓</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 형식 위반뿐 아니라 시간 초과, 연결
+                오류, 기능 미지원, 입력 잘림 등으로 유효한 답을 얻지 못한
+                비율입니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  100건 중 형식 위반 5건과 연결 실패 5건이 있었다면
+                  <strong>전체 실패율은 10%</strong>입니다. 앞의 스키마 위반율
+                  5.3%와 다른 이유는 포함하는 실패와 분모가 다르기 때문입니다.
+                </p>
+              </div>
+              <p>
+                <strong>원인별로 읽기</strong> 연결·시간 초과는 서버와 제한
+                시간을, unsupported는 모델/API 지원을, truncated는 입력 길이와
+                공간을 확인합니다. schema는 반환 형식, protocol은 처리 완료나
+                출력 조건을 확인하지 못했다는 뜻입니다.
+              </p>
+              <p class="metric-caution">
+                틀렸지만 형식이 유효한 답은 ‘실패’가 아니라 정확도의 오답입니다.
+                중단해서 아직 실행하지 않은 요청과 준비 실행도 실패율에 넣지
+                않습니다.
+              </p>
+            </div>
+          </details>
+
+          <h3 class="metric-group-title">04 / 사용자가 얼마나 기다리나요?</h3>
+          <details class="metric-explainer" id="guide-latency">
+            <summary>
+              <span class="metric-name">종단간 p50 / p95 · 응답 시간</span
+              ><span class="metric-one-line"
+                >평소 속도와 드물게 오래 걸리는 속도 · ↓</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>p50은 중앙값</strong>으로, 요청의 절반 정도가 이 시간
+                안에 끝납니다. <strong>p95</strong>는 약 95%가 이 시간 안에
+                끝나고, 나머지 약 5%는 더 오래 걸리는 경계입니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  p50=0.5초, p95=3초라면 보통은 빠르지만 일부 요청에서는 몇 초를
+                  기다려야 한다는 뜻입니다. 두 모델의 p50이 같아도 p95가 3초와
+                  12초라면 오래 기다리는 경험은 다릅니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 브라우저에서 요청을 시작한 시점부터
+                응답을 받아 처리한 시점까지 잽니다. 시간 초과 등 실패 요청의
+                기다림도 포함하고 준비 실행은 제외합니다. 정렬한 시간의 사이값은
+                선형 보간하므로 소수 표본에서는 실제 관측값과 다를 수 있습니다.
+              </p>
+              <p class="metric-caution">
+                p95는 가장 느린 5%의 평균이나 최대 시간이 아닙니다. 적은 요청의
+                p95는 쉽게 흔들립니다. 시간 표본 수, 문서 길이, Mac 사양, 모델
+                적재 상태, 준비 실행 여부를 맞춰 보세요.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-runtime">
+            <summary>
+              <span class="metric-name">모델 준비 / 추론 p50</span
+              ><span class="metric-one-line"
+                >모델을 꺼내는 시간과 실제 판단 시간을 나눕니다 · ↓</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>모델 준비 시간</strong>은 실행기가 모델을 메모리에
+                올리는 등의 로딩에 보고한 시간입니다.
+                <strong>추론 시간</strong>은 문서를 읽고 답을 계산하는 데 보고한
+                시간입니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  첫 요청에서 준비 4초, 추론 0.5초, 전체 요청 4.8초가 나올 수
+                  있습니다. 다음 요청은 이미 적재된 모델을 써서 준비 시간이
+                  짧아질 수 있습니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 실행기가 제공한 유효한 시간만
+                사용합니다. Ollama 추론은 입력 처리와 출력 계산을 합칩니다. 값을
+                제공하지 않으면 ‘—’이며 0초로 만들지 않습니다.
+              </p>
+              <p class="metric-caution">
+                준비 p50 + 추론 p50이 종단간 p50과 같지는 않습니다. 통신 등 다른
+                비용이 있고 각 중앙값을 따로 계산하기 때문입니다. 모델별 준비
+                실행 1회를 선택하면 그 요청은 제외되지만 이후 모든 로딩 비용까지
+                사라진다는 뜻은 아닙니다.
+              </p>
+            </div>
+          </details>
+
+          <h3 class="metric-group-title">
+            05 / 사람에게 어느 정도 맡겨야 하나요?
+          </h3>
+          <details class="metric-explainer" id="guide-thresholds">
+            <summary>
+              <span class="metric-name">판정 기준 / 검토 기준</span
+              ><span class="metric-one-line"
+                >‘어떤 답인가’와 ‘사람이 볼까’는 다른 결정입니다</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>Noul 참 판정 기준</strong>은 참 확률이 얼마 이상이면
+                참으로 답할지 정합니다. <strong>검토 기준</strong>은 답을 정한
+                뒤 확신도가 얼마 미만이면 사람에게 맡길지 정합니다.
+              </p>
+              <div class="metric-example">
+                <strong>같은 응답으로 보기</strong>
+                <p>참 확률이 0.6이고 검토 기준이 0.5라면:</p>
+                <ul>
+                  <li>
+                    참 판정 기준 0.5 → 참으로 선택 → 선택한 답 확률 0.6 → 자동
+                    처리 대상.
+                  </li>
+                  <li>
+                    참 판정 기준 0.7 → 거짓으로 선택 → 선택한 답 확률 0.4 → 사람
+                    검토 대상.
+                  </li>
+                </ul>
+                <p>모델의 원래 참 확률 0.6은 바뀌지 않았습니다.</p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 결과 설정을 바꾸면 저장된 응답을
+                다시 집계합니다. Noul 기준은 정확도·선택 확률 ECE·검토율을 바꿀
+                수 있지만, 원래 참 확률로 계산하는 ROC·Brier는 바꾸지 않습니다.
+              </p>
+              <p class="metric-caution">
+                판정 기준을 높이면 양성으로 잡는 건수가 줄고, 검토 기준을 높이면
+                사람이 볼 건수가 늘어납니다. 기준을 정한 데이터와 최종 성능을
+                확인할 데이터는 따로 두세요.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-referral">
+            <summary>
+              <span class="metric-name"
+                >인간 검토율 / 실패 포함 검토 필요율</span
+              ><span class="metric-one-line"
+                >낮은 확신과 실패 때문에 사람이 볼 양</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>인간 검토율</strong>은 유효 응답 중 확신도가 검토
+                기준보다 낮은 비율입니다.
+                <strong>실패 포함 검토 필요율</strong>은 여기에 실패한 요청을
+                더해 전체 실행 요청으로 나눕니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  100건 중 실패가 10건이고, 성공한 90건 중 18건의 확신도가
+                  기준보다 낮다면:
+                </p>
+                <ul>
+                  <li>인간 검토율 = 18 ÷ 90 = <strong>20%</strong></li>
+                  <li>
+                    실패 포함 검토 필요율 = (18+10) ÷ 100 = <strong>28%</strong>
+                  </li>
+                </ul>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 선택한 확신도 출처를 사용합니다.
+                기준보다 낮을 때만 검토하며 기준과 같으면 자동 처리 대상입니다.
+                실제 검토 대기열에 문서를 보내지는 않고, 예상 비율만 계산합니다.
+              </p>
+              <p class="metric-caution">
+                낮을수록 사람의 일이 줄지만 좋은 모델이라는 보장은 아닙니다.
+                틀린 답에도 자신 있는 모델은 검토율이 낮을 수 있습니다. 자동
+                처리 정확도를 꼭 같이 확인하세요.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-coverage">
+            <summary>
+              <span class="metric-name">자동 처리 비율 · Coverage</span
+              ><span class="metric-one-line"
+                >전체 요청 중 사람 검토 없이 처리할 수 있는 몫</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 유효한 답을 받았고 확신도도 기준
+                이상인 요청의 비율입니다. 사람이 정답을 붙이지 않아도 계산할 수
+                있지만, 이 비율만으로 답이 맞는지는 알 수 없습니다.
+              </p>
+              <div class="metric-formula">
+                자동 처리 비율 = 확신도 기준 이상인 유효 응답 수 ÷ 전체 실행
+                요청 수
+              </div>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  100건 중 실패 10건, 낮은 확신 18건이면 나머지 72건이 자동 처리
+                  대상입니다. <strong>Coverage=72%</strong>이며 실패 포함 검토
+                  필요율 28%와 합하면 100%입니다.
+                </p>
+              </div>
+              <p class="metric-caution">
+                이 앱은 업무를 자동 실행하지 않습니다. ‘이 기준을 업무에
+                적용하면 어느 정도 자동화할 수 있는가’를 추정하는 수치입니다.
+                자동 처리 정확도와 함께 적정 기준을 찾으세요.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-selective">
+            <summary>
+              <span class="metric-name"
+                >자동 처리 답의 정확도 · Selective Accuracy</span
+              ><span class="metric-one-line"
+                >사람에게 넘기지 않을 답은 얼마나 맞나요? · ↑</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 검토 기준을 통과한 답만 따로 채점한
+                정확도입니다. 확신이 낮은 답을 사람이 검토할 때, 남은 자동 처리
+                영역의 품질을 봅니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  자동 처리 대상 72건에 모두 정답이 있고 그중 68건을 맞혔다면
+                  <strong>68 ÷ 72 ≈ 94.4%</strong>입니다. 나머지 4건은 사람 검토
+                  없이 넘어갈 오답입니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 자동 처리 대상 중에서도 정답이 있는
+                건만 분모에 넣습니다. 괄호의 ‘정답 N건’이 실제 채점 표본입니다.
+                해당 표본이 없으면 ‘—’입니다.
+              </p>
+              <p class="metric-caution">
+                검토 기준을 높여 아주 쉬운 문서 몇 건만 남기면 100%가 나올 수
+                있습니다. Coverage가 1%인지 80%인지에 따라 실용성이 다르므로 두
+                값을 함께 보세요.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-risk">
+            <summary>
+              <span class="metric-name"
+                >Coverage–Risk · 자동 처리와 오답의 관계</span
+              ><span class="metric-one-line"
+                >더 많이 자동화할 때 실수가 얼마나 남나요?</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>그래프 읽기</strong> 검토 기준을 바꿔 가며 가로축에 자동
+                처리 비율, 세로축에 자동 처리된 답의 오답률을 그립니다. 같은
+                자동 처리 비율에서 낮은 오답률이 바람직합니다.
+              </p>
+              <div class="metric-example">
+                <strong>점 하나로 보기</strong>
+                <p>
+                  채점 가능한 성공 응답 100건 중 60건을 자동 처리하고 3건이
+                  틀리면 점은 <strong>(0.60, 0.05)</strong>입니다. 자동 처리율
+                  60%, 그 안의 오답률 5%를 뜻합니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 검토 기준을 0부터 1까지 0.05
+                간격으로 바꿉니다. 이 그래프의 분모는
+                <strong>정답이 있는 유효 응답</strong>이고, 요약표 Coverage의
+                분모는 <strong>실패도 포함한 전체 요청</strong>이므로 서로 다를
+                수 있습니다.
+              </p>
+              <p class="metric-caution">
+                자동 처리할 답이 하나도 없으면 위험을 측정할 수 없어 점을 그리지
+                않습니다. 기준을 높인다고 관측 오답률이 반드시 매번 낮아지지는
+                않습니다. 실제 점과 표본 수를 확인하세요.
+              </p>
+            </div>
+          </details>
+
+          <h3 class="metric-group-title">
+            06 / 필요한 대상을 위쪽에 잘 골라내나요?
+          </h3>
+          <details class="metric-explainer" id="guide-roc">
+            <summary>
+              <span class="metric-name">ROC 곡선 / ROC-AUC</span
+              ><span class="metric-one-line"
+                >놓침을 줄이려면 오탐을 얼마나 받아들여야 할까요? · AUC ↑</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>ROC</strong>는 양성 판정 기준을 움직일 때 재현율과
+                오탐률이 어떻게 변하는지 그린 곡선입니다. 가로축은
+                <strong>실제 음성 중 잘못 잡은 비율(FPR)</strong>, 세로축은
+                <strong>실제 양성 중 찾아낸 비율(Recall)</strong>입니다.
+              </p>
+              <div class="metric-example">
+                <strong>환불 예시로 보기</strong>
+                <p>
+                  실제 환불 20건 중 16건을 찾고, 비환불 80건 중 8건을 잘못
+                  잡았다면 한 점은
+                  <strong>(FPR 0.10, Recall 0.80)</strong>입니다. FPR의 분모는
+                  실제 비환불 80건이며 모델이 잡은 24건이 아닙니다.
+                </p>
+              </div>
+              <p>
+                <strong>AUC</strong>는 이 곡선 아래 면적입니다. 1에 가까울수록
+                양성을 음성보다 높은 점수에 두는 순서가 좋고, 무작위 순서의
+                기준은 대략 0.5입니다. 예를 들어 AUC=0.9는 정답률 90%라는 뜻이
+                아닙니다.
+              </p>
+              <p>
+                <strong>이 앱에서는</strong> 선택한 클래스 하나를 양성, 나머지를
+                음성으로 보는 OvR 방식을 씁니다. 실제 양성과 음성이 모두 있어야
+                계산하며, 동점은 함께 처리합니다. 곡선의 임계값은 관측한
+                확률에서 정합니다.
+              </p>
+              <p class="metric-caution">
+                AUC 하나로 ‘최적 기준’을 정할 수 없습니다. 놓침·오탐의 비용과
+                허용량을 정하고 임계값별 표를 보세요. 원래 확률을 쓰므로 현재
+                Noul 판정 기준만 바꾸어도 전체 ROC는 유지됩니다.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-ap">
+            <summary>
+              <span class="metric-name">AP · Average Precision</span
+              ><span class="metric-one-line"
+                >높은 점수부터 볼 때 진짜 대상이 얼마나 모이나요? · ↑</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 찾고 싶은 문서를 높은 점수 순서로
+                검토할 때, 앞쪽에 진짜 대상이 잘 모여 있는지입니다. 여러
+                임계값의 Precision을 Recall이 늘어나는 양만큼 가중해 더합니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  서로 다른 점수 순으로 정답이 [환불, 비환불, 환불,
+                  비환불]이라면 환불은 총 2건입니다. 첫 환불을 찾을 때
+                  Precision은 1/1, 두 번째를 찾을 때는 2/3입니다.
+                </p>
+                <p>
+                  <strong>AP = ½×1 + ½×(2/3) ≈ 0.833</strong>입니다. 한
+                  임계값에서의 정확도나 정밀도 83.3%를 뜻하지 않습니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 선택 클래스의 AP를 숫자로
+                제공합니다. Recall 증가분을 곱하는 방식이며 PR 곡선의 사다리꼴
+                면적과는 다릅니다. ROC 계산과 함께 수행하므로 양성·음성이 모두
+                있어야 표시합니다.
+              </p>
+              <p class="metric-caution">
+                희귀한 기밀·이상 사례를 찾을 때 ROC-AUC와 함께 보면 유용합니다.
+                양성 비율이 바뀌면 AP의 기준 수준도 달라지므로 같은 데이터에서
+                비교하세요.
+              </p>
+              <p class="metric-source">
+                정의 참고:
+                <a
+                  href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html"
+                  target="_blank"
+                  rel="noreferrer"
+                  >Average Precision</a
+                >
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-macro-auc">
+            <summary>
+              <span class="metric-name">macro-AUC</span
+              ><span class="metric-one-line"
+                >모든 클래스의 구별 능력을 같은 비중으로 평균합니다 · ↑</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 결제 대 나머지, 기술 대 나머지,
+                계정 대 나머지를 각각 평가한 AUC의 평균입니다. 화면에서 선택한
+                클래스 하나의 ROC-AUC와 다릅니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  세 클래스 AUC가 0.95, 0.80, 0.65라면
+                  <strong>macro-AUC = 0.80</strong>입니다. 평균이 괜찮아도
+                  0.65인 클래스는 개선이 필요할 수 있습니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 설정한 모든 클래스에서 양성·음성
+                정답이 모두 있어 AUC를 계산할 수 있을 때만 평균합니다. 한
+                클래스라도 계산할 수 없으면 ‘—’입니다.
+              </p>
+              <p class="metric-caution">
+                데이터에서 빠진 클래스가 있는지 먼저 확인하세요. 계산되지 않은
+                클래스를 몰래 제외한 평균은 보여주지 않습니다.
+              </p>
+            </div>
+          </details>
+
+          <h3 class="metric-group-title">
+            07 / Score는 정답 점수에서 얼마나 벗어났나요?
+          </h3>
+          <details class="metric-explainer" id="guide-score">
+            <summary>
+              <span class="metric-name">Score 기대 점수</span
+              ><span class="metric-one-line"
+                >가장 유력한 한 단계와 전체 확률의 평균은 다릅니다</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>쉽게 말하면</strong> 0·1·2 같은 각 단계의 점수에 그 단계
+                확률을 곱해 모두 더한 값입니다. 하나를 골라 반올림한 점수가
+                아니므로 소수가 나올 수 있습니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>
+                  일반 0점, 주의 1점, 긴급 2점의 확률이 [0.1, 0.6, 0.3]이면:
+                </p>
+                <p>
+                  <strong>기대 점수 = 0×0.1 + 1×0.6 + 2×0.3 = 1.2</strong
+                  ><br />가장 유력한 단계 = 주의 1점
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> MAE·RMSE는 1.2를 정답 숫자와
+                비교합니다. Accuracy·F1 등 분류 지표는 최고 확률 단계 1을 정답
+                단계와 비교합니다. 정답이 1.5처럼 소수이면 수치 오차에만
+                포함합니다.
+              </p>
+              <p class="metric-caution">
+                현재 계산은 단계 간 점수 간격을 모두 1로 둡니다. 실제 업무에서
+                일반→주의와 주의→긴급의 비용 차이가 같다는 뜻은 아닙니다.
+              </p>
+            </div>
+          </details>
+          <details class="metric-explainer" id="guide-mae">
+            <summary>
+              <span class="metric-name">MAE / RMSE · 점수 오차</span
+              ><span class="metric-one-line"
+                >평균적으로 얼마나 빗나가며, 큰 오차가 있나요? · ↓</span
+              >
+            </summary>
+            <div class="metric-guide-body">
+              <p>
+                <strong>MAE</strong>는 정답과 기대 점수의 차이에서 부호를 지운
+                뒤 평균합니다. 0.4라면 평균적으로 0.4점만큼 벗어났다는 뜻입니다.
+              </p>
+              <p>
+                <strong>RMSE</strong>는 차이를 제곱해 평균한 다음 제곱근을
+                구합니다. 큰 실수에 더 민감해 가끔 아주 크게 빗나가는 모델을
+                확인하는 데 유용합니다.
+              </p>
+              <div class="metric-example">
+                <strong>숫자로 보기</strong>
+                <p>세 문서의 점수 오차가 [0, 0, 2]이면:</p>
+                <ul>
+                  <li>MAE = (0+0+2) ÷ 3 ≈ <strong>0.667점</strong></li>
+                  <li>RMSE = √((0²+0²+2²) ÷ 3) ≈ <strong>1.155점</strong></li>
+                </ul>
+                <p>
+                  반면 오차가 [0, 1, 1]이면 MAE는 같지만 RMSE는 약 0.816점으로
+                  작습니다. 큰 오차 한 건의 차이가 드러납니다.
+                </p>
+              </div>
+              <p>
+                <strong>이 앱에서는</strong> 유효한 Score 응답과 숫자 정답이
+                있는 건만 사용합니다. 소수 정답도 포함하고 실패·정답 미지정은
+                제외합니다. 단위는 질문에서 정한 단계 점수입니다.
+              </p>
+              <p class="metric-caution">
+                0~2점 질문의 MAE와 0~9점 질문의 MAE를 그대로 비교하지 마세요.
+                같은 단계와 같은 정답으로 비교하고, 큰 오차가 특정 종류의 문서에
+                몰리는지도 개별 결과에서 확인하세요.
+              </p>
+            </div>
+          </details>
+
+          <div class="metric-takeaway">
+            <h3>모델을 고를 때는 이 순서로 보세요</h3>
+            <ol>
+              <li>
+                <strong>같은 시험인가?</strong> 질문·정답·선택지·모델 버전·준비
+                실행 조건을 맞춥니다.
+              </li>
+              <li>
+                <strong>사용할 답을 주는가?</strong> 전체 실패율과 스키마
+                위반율부터 확인합니다.
+              </li>
+              <li>
+                <strong>중요한 실수를 줄이는가?</strong> Choice/Noul은 클래스별
+                Recall·Precision, Score는 MAE·RMSE를 봅니다.
+              </li>
+              <li>
+                <strong>자동화해도 되는 범위인가?</strong> 확신도 보정, 자동
+                처리 비율과 그 안의 정확도를 함께 봅니다.
+              </li>
+              <li>
+                <strong>기다릴 수 있는가?</strong> p50·p95와 시간 표본 수를
+                확인합니다.
+              </li>
+            </ol>
+            <p>
+              기준을 고르는 데이터와 최종 평가 데이터를 나누세요. 이 화면은
+              관측값을 비교하며 통계적 신뢰구간이나 미래 성능 보장을 제공하지
+              않습니다.
+            </p>
+          </div>
+          <p class="metric-source">
+            앱 계산 기준과 예시는 현재 구현에 맞춰 작성했습니다. 정의 참고:
+            <a
+              href="https://scikit-learn.org/stable/modules/model_evaluation.html"
+              target="_blank"
+              rel="noreferrer"
+              >평가지표 공식 문서</a
+            >
+            ·
+            <a
+              href="https://scikit-learn.org/stable/modules/calibration.html"
+              target="_blank"
+              rel="noreferrer"
+              >확률 보정</a
+            >
+            ·
+            <a
+              href="https://scikit-learn.org/stable/modules/classification_threshold.html"
+              target="_blank"
+              rel="noreferrer"
+              >판정 기준 선택</a
+            >. 확인일: 2026-10-11.
+          </p>
+        </section>
+
+        <!--
+다른 Mac으로 옮기는 안내와 ZIP 다운로드. ZIP 구성은 package_app.py의 허용 목록에서 관리한다.
+-->
+        <section class="eval-panel" id="portable">
+          <div class="eyebrow">TAKE IT TO ANOTHER MAC</div>
+          <h2>같은 실험을 다른 맥북에서도</h2>
+          <ol class="guide-list">
+            <li>
+              <strong>앱 묶음을 복사합니다.</strong
+              ><span
+                ><a href="/portable.zip" download>다른 Mac용 ZIP 받기</a>.
+                압축을 풀어 쓰세요. 모델 가중치는 포함하지 않습니다.</span
+              >
+            </li>
+            <li>
+              <strong>처음 한 번, setup.command를 엽니다.</strong
+              ><span
+                >Python 3.9 이상과 Ollama가 필요합니다. 도우미가 설치 상태를
+                안내하고 Apple Silicon Mac에 Ollaya와 기본 4종 모델을
+                준비합니다. 초기 다운로드는 약 10GB 이상입니다.</span
+              >
+            </li>
+            <li>
+              <strong>start.command를 엽니다.</strong
+              ><span
+                >이후에는 로컬 웹 화면에서 사용합니다. 질문·데이터 저장 파일을
+                가져오면 같은 조건을 재사용할 수 있습니다. 실행 창은 열어
+                두세요.</span
+              >
+            </li>
+          </ol>
+          <p class="help">
+            Apple Silicon(M1 이후)·macOS 14 이상에서 Ollaya를 지원합니다. Intel
+            Mac은 Ollama·llama.cpp 모델로 평가할 수 있으며 Ollaya 4종 실행은
+            지원하지 않습니다. 하드웨어·모델 버전이 달라지면 결과와 속도도
+            달라질 수 있습니다. 자세한 절차는 묶음의 README를 확인하세요.
+          </p>
+        </section>
+        <footer>
+          판단 실험실 · 로컬 모델 성능평가 · 질문과 입력은 자동 저장하지
+          않습니다.
+        </footer>
+      </main>
+    </div>
+    <!-- 설명 원본은 아래 지표 안내에 한 번만 둔다. evaluation.js가 선택한 설명을 이 대화상자에 복사한다.
+문서 입력이나 평가 결과를 바꾸지 않고, 닫으면 설명을 열었던 위치로 돌아간다. -->
+    <dialog
+      id="metric-help-dialog"
+      class="metric-help-dialog"
+      aria-labelledby="metric-help-title"
+    >
+      <form method="dialog" class="dialog-top">
+        <div>
+          <span class="eyebrow">METRIC EXPLAINED</span>
+          <h2 id="metric-help-title">지표 설명</h2>
+        </div>
+        <button class="close-btn" aria-label="지표 설명 닫기" autofocus>
+          ×
+        </button>
+      </form>
+      <div id="metric-help-content" class="metric-help-content"></div>
+      <form method="dialog" class="metric-help-footer">
+        <span>설명 예시는 가상 데이터입니다.</span
+        ><button class="secondary">결과로 돌아가기</button>
+      </form>
+    </dialog>
+  </body>
+</html>

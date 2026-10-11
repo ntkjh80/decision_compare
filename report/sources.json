@@ -1,0 +1,122 @@
+[
+  {
+    "id": "privatemode",
+    "url": "https://privatemode.ai/blog/system-one-from-glm-flash",
+    "ok": true,
+    "characters": 20711
+  },
+  {
+    "id": "jev",
+    "url": "https://docs.typesafe.ai/concepts/system-one",
+    "ok": true,
+    "characters": 3633
+  },
+  {
+    "id": "rlcd",
+    "url": "https://docs.typesafe.ai/introduction/machine-learning-primer",
+    "ok": true,
+    "characters": 3931
+  },
+  {
+    "id": "decider",
+    "url": "https://huggingface.co/Mapika/decider-0.8b/raw/main/README.md",
+    "characters": 6925,
+    "ok": true
+  },
+  {
+    "id": "kev",
+    "url": "https://huggingface.co/jaredpalmer/kev-4b/raw/main/README.md",
+    "characters": 24878,
+    "ok": true
+  },
+  {
+    "id": "eos",
+    "url": "https://huggingface.co/vllm-sr/Decision-1.0-Eos-0.8B/raw/main/ARCHITECTURE.md",
+    "characters": 2244,
+    "ok": true
+  },
+  {
+    "id": "jeff",
+    "url": "https://raw.githubusercontent.com/firelex/jeff/main/README.md",
+    "characters": 19564,
+    "ok": true
+  },
+  {
+    "id": "winnow",
+    "url": "https://huggingface.co/EldanRing/Winnow-E4B/raw/main/README.md",
+    "characters": 9961,
+    "ok": true
+  },
+  {
+    "id": "nimble",
+    "url": "https://huggingface.co/bespokelabs/Bespoke-Nimble-9B-v2/raw/main/README.md",
+    "characters": 7573,
+    "ok": true
+  },
+  {
+    "id": "jeeves",
+    "url": "https://huggingface.co/PostHog/jeeves/raw/main/README.md",
+    "characters": 5486,
+    "ok": true
+  },
+  {
+    "id": "clef",
+    "url": "https://huggingface.co/Cloudflare/clef-flash/raw/main/README.md",
+    "characters": 10222,
+    "ok": true
+  },
+  {
+    "id": "von",
+    "url": "https://huggingface.co/wfzyx/von/raw/main/README.md",
+    "characters": 9500,
+    "ok": true
+  },
+  {
+    "id": "clm",
+    "url": "https://huggingface.co/ldov/CLM-v0.1-8B/raw/main/README.md",
+    "characters": 5127,
+    "ok": true
+  },
+  {
+    "id": "gliclass",
+    "url": "https://raw.githubusercontent.com/Knowledgator/GLiClass/main/README.md",
+    "characters": 12108,
+    "ok": true
+  },
+  {
+    "id": "nli",
+    "url": "https://huggingface.co/MoritzLaurer/ModernBERT-large-zeroshot-v2.0/raw/main/README.md",
+    "characters": 3245,
+    "ok": true
+  },
+  {
+    "id": "glm",
+    "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/README.md",
+    "characters": 8004,
+    "ok": true
+  },
+  {
+    "id": "qwen",
+    "url": "https://huggingface.co/Qwen/Qwen3.5-4B/raw/main/README.md",
+    "characters": 77646,
+    "ok": true
+  },
+  {
+    "id": "jevk5",
+    "url": "https://huggingface.co/alibiserikbay/JevK5/raw/main/README.md",
+    "characters": 14923,
+    "ok": true
+  },
+  {
+    "id": "laya",
+    "url": "https://huggingface.co/convaiinnovations/laya/raw/main/README.md",
+    "characters": 22960,
+    "ok": true
+  },
+  {
+    "id": "cygnet",
+    "url": "https://huggingface.co/blockbrain-ai/Cygnet/raw/main/README.md",
+    "error": "HTTP Error 401: Unauthorized",
+    "ok": false
+  }
+]
